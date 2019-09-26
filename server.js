@@ -6,13 +6,19 @@ const users = require("./routes/api/users");
 const profile = require("./routes/api/profile");
 const posts = require("./routes/api/posts");
 const bodyParser = require("body-parser");
+const passport = require("passport");
 
 // Body parser middleware
 // Telling Express to use bodyParser
 // extended false is default form of encoding
-app.use(bodyParser.urlencoded({extended: false}));
+app.use(bodyParser.urlencoded({ extended: false }));
 // Telling bodyParser we're using json
 app.use(bodyParser.json());
+
+// Passport configuration
+app.use(passport.initialize());
+// same as const passport= require("./config/passport")
+require("./config/passport")(passport);
 
 //Db config
 const db = require("./config/keys").mongoURI;

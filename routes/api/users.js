@@ -4,6 +4,9 @@ const router = express.Router();
 const User = require("../../models/User");
 const gravatar = require("gravatar");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const keys = require("../../config/keys");
+const passport=require('passport');
 
 // @route   POST api/users/register
 // @desc    Register a user
@@ -70,14 +73,66 @@ router.post("/login", (req, res) => {
 
   // Find user by email
   User.findOne({ email })
+    // what is returned from findOne is put in variable called user
     .then(user => {
       if (!user) {
         return res.status(404).json({
           email: "User not found"
         });
       }
+      // compare plain text password to encrypted password using bcrypt's compare function
+      bcrypt
+        .compare(password, user.password)
+        // whatever is output of previous function is put in variable
+        // create variable isMatch for boolean that bcrypt.compare function returns
+        .then(isMatch => {
+          if (!isMatch) {
+            return res.status(400).json({
+              // msg is for password field
+              password: "Password does not match"
+            });
+          }
+          // for user match
+          const payload = {
+            id: user.id,
+            name: user.name,
+            avatar: user.avatar
+          };
+          // create token
+          // sign function takes in payload and key to generate token
+          // also takes in expiry time in seconds
+          // more options in payload make stronger token
+          // secretOrKey is from config/keys
+          // jwt.sign is older function that doesn't support promise statements so we're doing a callback (4th parameter below)
+          jwt.sign(
+            payload,
+            keys.secretOrKey,
+            { expiresIn: 3600 },
+            (err, token) => {
+              if (err) throw err;
+
+              return res.json({
+                success: true,
+                token: "Bearer " + token
+              });
+            }
+          );          
+        })
+        .catch(err => console.log(err));
     })
     .catch(err => console.log(err));
 });
+
+// @route   GET api/users/current
+// @desc    return current user's info
+// @access  Private
+
+router.get(
+  '/current',
+  //private route so bring in passport as 2nd parameter
+  passport.authenticate('jwt',{session: false}),
+  (req, res)=>{
+    res.json({msg: "Success"});
+  });
 
 module.exports = router;
